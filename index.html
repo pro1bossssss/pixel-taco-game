@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Pixel Taco: v7.22.2 Poki Ready</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0b0b0d;--accent:#00ccff;--accent-2:#00ff88;--panel:#111215;--text:#fff;--danger:#ff0044;--gold:#ffcc00;}
+    html,body{height:100%; overflow:hidden; touch-action: none;} 
+    body{margin:0;padding:10px;background:#050505;color:var(--text);font-family:'Press Start 2P',monospace;display:flex;justify-content:center; align-items:center; user-select: none; -webkit-user-select: none;}
+    
+    .wrap{
+      width:100%; max-width:1100px; height:95vh; display:flex; gap:12px;
+      background: #090909; border: 2px solid #333; border-radius:16px; padding:12px;
+      box-shadow: 0 0 40px rgba(0, 204, 255, 0.15);
+      position: relative;
+    }
+
+    .game-area{
+      flex: 2; position:relative; border-radius:12px; overflow:hidden; 
+      background:#000; cursor: crosshair;
+      border: 3px solid #222;
+      box-shadow: inset 0 0 30px #000;
+      transform: translateZ(0); 
+    }
+    
+    .sidebar{
+      flex: 1; display:flex; flex-direction:column; gap:12px; min-width: 280px; max-width: 350px;
+      overflow-y: auto; padding-right: 4px;
+    }
+
+    .hud{position:absolute;left:14px;top:14px;z-index:10; pointer-events: none; text-shadow: 2px 2px 0 #000;}
+    .stat{margin-bottom:10px; color:#fff; font-size:11px; letter-spacing: 0.5px;}
+    .stat strong {color: var(--accent-2); font-size: 13px;}
+    
+    .panel{background:#111; padding:14px; border-radius:10px; border:1px solid #2a2a2a; position: relative;}
+    .muted{color:#666; font-size:9px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px; border-bottom: 1px solid #222; padding-bottom: 4px;}
+    
+    button, select, input {
+      font-family:'Press Start 2P'; border:none; cursor:pointer; outline:none;
+      transition: transform 0.1s, background 0.1s; text-transform:uppercase; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .btn {
+      width:100%; padding:12px; margin-top:6px; font-size:9px;
+      background: #1a1a1a; color: #fff; border-radius:6px;
+      border: 1px solid #333; display: flex; justify-content: space-between; align-items: center;
+      text-align: left;
+    }
+    .btn:active:not(:disabled) {transform:translateY(2px); background: #333;}
+    .btn:disabled {opacity: 0.5; cursor: not-allowed;}
+    
+    .big-button {
+      position:absolute; bottom:25px; left:50%; transform:translateX(-50%);
+      padding:16px 32px; background: linear-gradient(45deg, var(--accent), #0088cc); 
+      color:#fff; border-radius:50px; font-size:13px; 
+      box-shadow: 0 0 25px rgba(0, 204, 255, 0.4);
+      border: 2px solid rgba(255,255,255,0.2); z-index: 20;
+      white-space: nowrap;
+    }
+    .big-button:active {transform:translateX(-50%) scale(0.95);}
+
+    /* Стили настроек */
+    .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 9px; }
+    select { background: #222; color: #fff; padding: 4px; border-radius: 4px; font-size: 8px; width: 100px; }
+    input[type=range] { width: 100px; accent-color: var(--accent); }
+
+    ::-webkit-scrollbar {width: 5px;}
+    ::-webkit-scrollbar-thumb {background: #333; border-radius:3px;}
+
+    #audio-controls {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 0; border-top: 1px solid #222; margin-top: 12px;
+    }
+    #music-toggle { padding: 8px 12px; font-size: 8px; background: #333; border: 1px solid #555;}
+
+    @media(max-width:850px){
+        .wrap{flex-direction:column; height:100vh; max-width: 100%; border:none; border-radius:0;} 
+        .game-area{flex: 1; min-height: 50vh; border-radius: 0; border-left:none; border-right:none;}
+        .sidebar{flex: 1; min-width: 100%; border-top: 2px solid #333;}
+        .big-button{bottom: 15px; padding: 12px 24px;}
+    }
+    
+    .save-notif {
+        position: absolute; top: 10px; right: 10px; 
+        background: var(--accent); color: #000; padding: 4px 8px; 
+        border-radius: 4px; font-size: 8px; opacity: 0; transition: opacity 0.5s;
+        pointer-events: none; z-index: 100;
+    }
+    .fps-meter {
+        position: absolute; top: 10px; right: 10px;
+        color: #555; font-size: 8px; pointer-events: none;
+    }
+  </style>
+
+  <!-- 
+    МЕСТО ДЛЯ ИНТЕГРАЦИИ POKI SDK
+    ЗДЕСЬ НУЖНО ДОБАВИТЬ СКРИПТ, КОТОРЫЙ ВЫ ПОЛУЧИТЕ ОТ POKI.
+    Например: <script src="https://game-cdn.poki.com/poki-sdk.js"></script>
+  -->
+  <script>
+    // === POKI SDK MOCK (ЗАГЛУШКА) ===
+    // Реальный SDK Poki будет загружен здесь, когда вы его получите.
+    // Эти моки используются для имитации работы SDK.
+    window.Poki = window.Poki || {
+        isInitialized: true,
+        gameplayStart: function() { console.log('Poki: gameplayStart() - Геймплей начат.'); },
+        gameplayStop: function() { console.log('Poki: gameplayStop() - Геймплей остановлен (Пауза/Магазин).'); },
+        commercialBreak: function(callback) { 
+            console.log('Poki: commercialBreak() - Запуск полноэкранной рекламы...'); 
+            // В реальной игре здесь будет реклама. После ее завершения вызывается callback.
+            setTimeout(() => { console.log('Poki: Реклама завершена. Возобновление.'); callback(true); }, 500); 
+        },
+        rewardedBreak: function(callback) { 
+            console.log('Poki: rewardedBreak() - Запуск рекламы за вознаграждение...'); 
+            setTimeout(() => { console.log('Poki: Реклама с вознаграждением завершена. Вознаграждение выдано.'); callback(true); }, 500); 
+        },
+        // Добавьте другие необходимые функции, такие как 'set
+    };
+    // === КОНЕЦ MOCK ===
+  </script>
+</head>
+<body onpointerdown="startMusic()">
+  
+  <audio id="gameMusic" loop>
+    <!-- Ассет из файла 'taco clicer lobby sound.mp3' -->
+    <source src="data/music/taco clicer lobby sound.mp3" type="audio/mpeg"> 
+  </audio>
+  <audio id="clickSound">
+    <!-- Ассет из файла 'click_sound.mp3' -->
+    <source src="data/music/click_sound.mp3" type="audio/mpeg">
+  </audio>
+
+  <div class="wrap">
+    <div id="saveNotif" class="save-notif">SAVED ✓</div>
+    
+    <div class="game-area" id="gameArea">
+      <canvas id="gameCanvas"></canvas>
+      <div class="hud">
+        <div class="stat"><span data-lang="balance">БАЛАНС</span>: <strong id="money">0</strong> $</div>
+        <div class="stat" id="comboStat"><span data-lang="combo">КОМБО</span>: <strong id="combo">0</strong></div>
+        <div class="stat"><span data-lang="boss_lvl">БОСС УР.</span>: <strong id="bossLevelDisplay">1</strong></div>
+        <div class="stat"><span data-lang="dmg">УРОН</span>: <span id="perClickDisplay">1</span></div>
+      </div>
+      <div class="fps-meter" id="fpsMeter">FPS: 60</div>
+      <button id="spawnBurstBtn" class="big-button" data-lang="rain_btn">ТАКО ДОЖДЬ 🌮</button>
+    </div>
+
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="muted" data-lang="shop">МАГАЗИН</div>
+        <!-- Вызываем Poki.gameplayStop() при открытии/закрытии магазина -->
+        <div id="shopContainer" onclick="Poki.gameplayStop()" onfocusout="Poki.gameplayStart()"></div>
+      </div>
+
+      <div class="panel">
+        <div class="muted" data-lang="settings">НАСТРОЙКИ</div>
+        
+        <!-- Язык -->
+        <div class="setting-row">
+            <span data-lang="lang">Язык</span>
+            <select id="langSelect">
+                <option value="ru">Русский</option>
+                <option value="ua">Українська</option>
+                <option value="en">English</option>
+                <option value="sv">Svenska</option>
+                <option value="de">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="pt">Português</option>
+                <option value="jp">日本語</option>
+                <option value="cn">中文</option>
+            </select>
+        </div>
+
+        <!-- Громкость -->
+        <div class="setting-row">
+            <span data-lang="volume">Громкость</span>
+            <input type="range" id="volumeSlider" min="0" max="100" value="50">
+        </div>
+
+        <!-- Музыка вкл/выкл -->
+        <div id="audio-controls">
+            <span style="font-size: 9px; color: var(--accent-2);">Lobby Theme</span>
+            <button id="music-toggle" class="btn">OFF</button>
+        </div>
+
+        <button id="resetBtn" class="btn" style="border-color: var(--danger); color: var(--danger); justify-content: center; margin-top:15px;" data-lang="reset">
+          СБРОС ПРОГРЕССА
+        </button>
+      </div>
+    </aside>
+  </div>
+
+<script>
+(function(){
+/**
+ * PIXEL TACO: V7.22.2 - Poki SDK Ready
+ * 1. ADDED: Poki SDK mock/placeholder in the <head> section.
+ * 2. INTEGRATED: Calls to Poki.gameplayStart() and Poki.gameplayStop() at key moments.
+ * 3. INTEGRATED: Logic to call Poki.commercialBreak() after killing a Boss.
+ */
+
+const CONFIG = { w:0, h:0, saveKey:'pixelTaco_V7' };
+const HITBOX_PADDING = 30; // Насколько легче попасть по тако (в пикселях)
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('gameArea');
+const audioEl = document.getElementById('gameMusic');
+const clickSoundEl = document.getElementById('clickSound');
+const musicToggleBtn = document.getElementById('music-toggle');
+
+// === POKI SDK WRAPPERS ===
+function startGameplay() {
+    if (window.Poki && window.Poki.gameplayStart) {
+        window.Poki.gameplayStart();
+        console.log("Poki: Gameplay Started.");
+    }
+}
+
+function stopGameplay() {
+    if (window.Poki && window.Poki.gameplayStop) {
+        window.Poki.gameplayStop();
+        console.log("Poki: Gameplay Stopped (Pause/Menu).");
+    }
+}
+
+function showCommercialBreak(onComplete) {
+    if (window.Poki && window.Poki.commercialBreak) {
+        // Останавливаем геймплей перед рекламой
+        stopGameplay(); 
+        window.Poki.commercialBreak(() => {
+            // Возобновляем геймплей после рекламы
+            startGameplay(); 
+            if (onComplete) onComplete();
+        });
+    } else {
+        // Заглушка, если Poki SDK не загружен
+        console.log("Poki: Commercial Break Mock - Skipping ad.");
+        if (onComplete) onComplete();
+    }
+}
+// === END POKI SDK WRAPPERS ===
+
+// === LOCALIZATION ===
+const LANG = {
+    ru: { balance:"БАЛАНС", combo:"КОМБО", boss_lvl:"БОСС УР.", dmg:"УРОН", rain_btn:"ТАКО ДОЖДЬ 🌮", shop:"МАГАЗИН", settings:"НАСТРОЙКИ", lang:"Язык", volume:"Громкость", reset:"СБРОС ПРОГРЕССА", boss_warn:"БОСС АТАКУЕТ", kill_boss:"Убей босса!", reward:"НАГРАДА!", bought:"КУПЛЕНО", factory:"ФАБРИКА", upgrades: {click:"Урон Клика", speed:"Спавн", luck:"Удача", crit:"Крит", factory:"Фабрика", "auto":"Авто-Бот"} },
+    ua: { balance:"БАЛАНС", combo:"КОМБО", boss_lvl:"БОС РІВ.", dmg:"ШКОДА", rain_btn:"ТАКО ДОЩ 🌮", shop:"КРАМНИЦЯ", settings:"НАЛАШТУВАННЯ", lang:"Мова", volume:"Гучність", reset:"СКИДАННЯ", boss_warn:"БОС АТАКУЄ", kill_boss:"Вбий боса!", reward:"НАГОРОДА!", bought:"КУПЛЕНО", factory:"ФАБРИКА", upgrades: {click:"Клік", speed:"Спавн", luck:"Удача", crit:"Крит", factory:"Фабрика", "auto":"Авто-Бот"} },
+    en: { balance:"BALANCE", combo:"COMBO", boss_lvl:"BOSS LVL", dmg:"DMG", rain_btn:"TACO RAIN 🌮", shop:"SHOP", settings:"SETTINGS", lang:"Lang", volume:"Volume", reset:"RESET GAME", boss_warn:"BOSS ATTACK", kill_boss:"Kill Boss!", reward:"REWARD!", bought:"BOUGHT", factory:"FACTORY", upgrades: {click:"Click Dmg", speed:"Spawn Rate", luck:"Luck", crit:"Crit Chance", factory:"Factory", "auto":"Auto-Bot"} },
+    sv: { balance:"BALANS", combo:"KOMBO", boss_lvl:"BOSS LVL", dmg:"SKADA", rain_btn:"TACO REGN 🌮", shop:"AFFÄR", settings:"INSTÄLLN.", lang:"Språk", volume:"Volym", reset:"ÅTERSTÄLL", boss_warn:"BOSS ATTACK", kill_boss:"Döda Boss!", reward:"BELÖNING!", bought:"KÖPT", factory:"FABRIK", upgrades: {click:"Klick", speed:"Spawn", luck:"Tur", crit:"Kritisk", factory:"Fabrik", "auto":"Auto-Bot"} },
+    de: { balance:"BILANZ", combo:"COMBO", boss_lvl:"BOSS LVL", dmg:"SCHADEN", rain_btn:"TACO REGEN 🌮", shop:"LADEN", settings:"EINSTELL.", lang:"Sprache", volume:"Lautstärke", reset:"ZURÜCKSETZEN", boss_warn:"BOSS ANGRIFF", kill_boss:"Töte Boss!", reward:"BELOHNUNG!", bought:"GEKAUFT", factory:"FABRIK", upgrades: {click:"Klick", speed:"Spawn", luck:"Glück", crit:"Kritisch", factory:"Fabrik", "auto":"Auto-Bot"} },
+    fr: { balance:"SOLDE", combo:"COMBO", boss_lvl:"BOSS NIV", dmg:"DÉGÂTS", rain_btn:"PLUIE TACO 🌮", shop:"BOUTIQUE", settings:"PARAMÈTRES", lang:"Langue", volume:"Volume", reset:"RÉINITIALISER", boss_warn:"BOSS ATTAQUE", kill_boss:"Tuez Boss!", reward:"RÉCOMPENSE!", bought:"ACHETÉ", factory:"USINE", upgrades: {click:"Clic", speed:"Vitesse", luck:"Chance", crit:"Critique", factory:"Usine", "auto":"Auto-Bot"} },
+    es: { balance:"SALDO", combo:"COMBO", boss_lvl:"BOSS NIV", dmg:"DAÑO", rain_btn:"LLUVIA TACO 🌮", shop:"TIENDA", settings:"AJUSTES", lang:"Idioma", volume:"Volume", reset:"REINICIAR", boss_warn:"BOSS ATAQUE", kill_boss:"¡Mata Boss!", reward:"¡PREMIO!", bought:"COMPRADO", factory:"FÁBRICA", upgrades: {click:"Clic", speed:"Aparición", luck:"Suerte", crit:"Crítico", factory:"Fábrica", "auto":"Auto-Bot"} },
+    pt: { balance:"SALDO", combo:"COMBO", boss_lvl:"BOSS NIV", dmg:"DANO", rain_btn:"CHUVA TACO 🌮", shop:"LOJA", settings:"CONFIG", lang:"Idioma", volume:"Volume", reset:"REINICIAR", boss_warn:"BOSS ATAQUE", kill_boss:"Mate Boss!", reward:"PRÊMIO!", bought:"COMPRADO", factory:"FÁBRICA", upgrades: {click:"Clique", speed:"Spawn", luck:"Sorte", crit:"Crítico", factory:"FÁBRICA", "auto":"Auto-Bot"} },
+    jp: { balance:"残高", combo:"コンボ", boss_lvl:"ボスLV", dmg:"ダメージ", rain_btn:"タコ雨 🌮", shop:"ショップ", settings:"設定", lang:"言語", volume:"音量", reset:"リセット", boss_warn:"ボス攻撃", kill_boss:"ボスを倒せ!", reward:"報酬!", bought:"購入", factory:"工場", upgrades: {click:"クリック", speed:"スポーン", luck:"運", crit:"クリティカル", factory:"工場", "auto":"オート"} },
+    cn: { balance:"余额", combo:"连击", boss_lvl:"BOSS等级", dmg:"伤害", rain_btn:"塔可雨 🌮", shop:"商店", settings:"设置", lang:"语言", volume:"音量", reset:"重置", boss_warn:"BOSS攻击", kill_boss:"杀BOSS!", reward:"奖励!", bought:"已买", factory:"工厂", upgrades: {click:"点击", speed:"生成", luck:"幸运", crit:"暴击", factory:"工厂", "auto":"自动"} }
+};
+let currentLang = 'ru';
+
+// === ASSETS ===
+const assets = {
+    taco: { src: 'data/taco.png', img: new Image(), loaded: false },
+    goldTaco: { src: 'data/gold_taco.png', img: new Image(), loaded: false }, 
+    boss: { src: 'data/boss1.png', img: new Image(), loaded: false },
+    sadBoss: { src: 'data/sad_boss.png', img: new Image(), loaded: false },
+    bg1: { src: 'data/pixel_walper_lvl1.png', img: new Image(), loaded: false },
+    bg5: { src: 'data/pixel_walper_lvl5.png', img: new Image(), loaded: false }
+};
+
+Object.keys(assets).forEach(key => {
+    assets[key].img.src = assets[key].src;
+    assets[key].img.onload = () => assets[key].loaded = true;
+});
+
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const MAX_PARTICLES = isMobile ? 30 : 150; 
+const BOSS_SHAKE_AMT = 5; 
+
+function resize(){
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+  CONFIG.w = canvas.width;
+  CONFIG.h = canvas.height;
+  ctx.imageSmoothingEnabled = false;
+}
+window.addEventListener('resize', resize);
+resize();
+
+let bgTransitionY = 0; 
+const TRANSITION_SPEED = 10; 
+const DEFAULT_STATE = {
+    money: 0,
+    levels: { click: 0, speed: 0, luck: 0, crit: 0, auto: 0, factory: 0 },
+    combo: 0,
+    comboEnd: 0,
+    bossLevel: 1,
+    nextBossSpawnTime: 0,
+    lastPassiveTick: Date.now(), 
+    stats: { caught: 0, totalMoney: 0 },
+    needsBgReset: false,
+    gameInitialized: false 
+};
+let state = {...DEFAULT_STATE};
+
+// UPGRADES
+const UPGRADES = {
+    click: { id: 'click', baseCost: 150, costMult: 1.6, effect: (lvl) => 1 + (lvl * 3) },
+    speed: { id: 'speed', baseCost: 300, costMult: 1.5, effect: (lvl) => Math.max(100, 1000 - (lvl * 50)) },
+    luck: { id: 'luck', baseCost: 500, costMult: 1.8, effect: (lvl) => 0.05 + (lvl * 0.02) },
+    crit: { id: 'crit', baseCost: 500, costMult: 1.7, effect: (lvl) => 0.01 + (lvl * 0.01) },
+    factory: { id: 'factory', baseCost: 5000, costMult: 1.9, effect: (lvl) => lvl * 50 },
+    auto: { id: 'auto', baseCost: 2000, costMult: 2.0, effect: (lvl) => lvl }
+};
+
+const COLORS = ['#ff0055', '#00ffcc', '#ffff00', '#ff00ff', '#00ccff'];
+const COLOR_GOLD = '#ffcc00'; 
+let tacos = [];
+let particles = [];
+let floats = [];
+let boss = null;
+let shakeAmount = 0;
+let lastSpawnTime = 0;
+let lastAutoClick = 0;
+let musicStarted = false;
+let globalVolume = 0.5;
+
+class Particle {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    const spd = isMobile ? 6 : 12;
+    this.vx = (Math.random() - 0.5) * spd;
+    this.vy = (Math.random() - 0.5) * spd;
+    this.size = Math.random() * (isMobile?4:8) + 2;
+    this.life = 1.0;
+    this.color = color;
+  }
+  update() { this.x += this.vx; this.y += this.vy; this.vy += 0.5; this.life -= 0.07; }
+  draw(ctx) {
+    ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, this.size, this.size); ctx.globalAlpha = 1;
+  }
+}
+
+class FloatingText {
+  constructor(text, x, y, color) {
+    this.text = text; this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 2; this.vy = -3; this.life = 1.0;
+    this.color = color;
+    this.font = isMobile ? '8px "Press Start 2P"' : '10px "Press Start 2P"';
+  }
+  update() { this.x += this.vx; this.y += this.vy; this.life -= 0.03; }
+  draw(ctx) {
+    ctx.globalAlpha = Math.max(0, this.life); ctx.font = this.font; ctx.fillStyle = this.color;
+    ctx.strokeStyle = 'black'; ctx.lineWidth = 3; ctx.strokeText(this.text, this.x, this.y);
+    ctx.fillText(this.text, this.x, this.y); ctx.globalAlpha = 1;
+  }
+}
+
+class BossEntity {
+  constructor(lvl) {
+    this.hp = 100 * lvl; this.maxHp = this.hp; this.lvl = lvl;
+    this.size = isMobile ? 96 : 128;
+    this.x = CONFIG.w/2 - this.size/2; this.y = 60;
+    this.dead = false; this.isFalling = false;
+    this.rot = 0; this.rotSpeed = 0;
+    this.fallSpeed = 0;
+    this.targetX = this.x;
+  }
+  
+  hit(dmg) {
+    if (this.dead) return false;
+    this.hp -= dmg;
+    if(this.hp <= 0) {
+      this.dead = true; this.startDeathAnimation(); return true;
+    }
+    return false;
+  }
+
+  startDeathAnimation() {
+      this.isFalling = true; this.rotSpeed = 0.4; this.fallSpeed = 15; 
+      spawnParticles(this.x + this.size/2, this.y + this.size/2, COLOR_GOLD, isMobile ? 10 : 40);
+      addShake(15);
+  }
+
+  update() {
+    if (this.dead && !this.isFalling) return false; 
+    
+    if (!this.isFalling) {
+        let evadeSpeed = 0; let changeRate = 0;
+        if (this.lvl >= 10) { evadeSpeed = 0.08; changeRate = 0.02; } 
+        else if (this.lvl >= 5) { evadeSpeed = 0.03; changeRate = 0.01; }
+
+        if (evadeSpeed > 0) {
+            if (Math.abs(this.x - this.targetX) < 5 || Math.random() < changeRate) {
+                this.targetX = Math.random() * (CONFIG.w - this.size);
+            }
+            this.x += (this.targetX - this.x) * evadeSpeed;
+        }
+    }
+    if (this.isFalling) {
+        this.y += this.fallSpeed; this.rot += this.rotSpeed; this.fallSpeed += 0.5; 
+        if (this.y > CONFIG.h + this.size) return true; 
+    }
+    return false;
+  }
+
+  draw(ctx) {
+    let currentImage = this.isFalling ? assets.sadBoss : assets.boss;
+    let sx = 0; let sy = 0;
+    if(!this.isFalling && this.hp > 0 && shakeAmount > 0) {
+        sx = (Math.random()-0.5)*shakeAmount; sy = (Math.random()-0.5)*shakeAmount;
+    }
+    
+    ctx.save(); 
+    ctx.translate(this.x + this.size/2 + sx, this.y + this.size/2 + sy);
+    ctx.rotate(this.rot);
+    
+    if(currentImage.loaded) {
+        ctx.drawImage(currentImage.img, -this.size/2, -this.size/2, this.size, this.size);
+    } else { 
+        ctx.fillStyle=this.isFalling ? '#550000' : '#aa0000'; 
+        ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); 
+        ctx.fillStyle='#fff'; ctx.font = '16px "Press Start 2P"'; ctx.fillText("BOSS", -25, 5); 
+    }
+    ctx.restore();
+
+    if (!this.isFalling && !this.dead) { 
+        ctx.fillStyle='#000'; ctx.fillRect(this.x, this.y-20, this.size, 12);
+        ctx.fillStyle='#f00'; ctx.fillRect(this.x+2, this.y-18, Math.max(0, (this.hp/this.maxHp)*(this.size-4)), 8);
+        ctx.fillStyle='#fff'; ctx.font='10px "Press Start 2P"'; ctx.fillText(`LVL ${this.lvl}`, this.x+30, this.y-25);
+    }
+  }
+}
+
+// ===== LOGIC HELPERS =====
+function getClickPower() { return UPGRADES.click.effect(state.levels.click); }
+function getSpawnRate() { return UPGRADES.speed.effect(state.levels.speed); }
+function getLuck() { return UPGRADES.luck.effect(state.levels.luck); }
+function getAutoSpeed() { return state.levels.auto; } 
+function getCost(type) { const u = UPGRADES[type]; return Math.floor(u.baseCost * Math.pow(u.costMult, state.levels[type])); }
+function isBossActive() { return boss !== null && !boss.isFalling; } 
+function addShake(amt) { if(!isMobile || amt > 5) shakeAmount = amt; }
+
+function scheduleNextBoss() {
+    const minTime = 60000; const maxTime = 120000; 
+    const delay = Math.random() * (maxTime - minTime) + minTime;
+    state.nextBossSpawnTime = Date.now() + delay;
+}
+
+function spawnTaco(forceX, forceY, forceRare) {
+  if (isBossActive()) return; 
+  if (tacos.length > 20) return;
+
+  const isRare = forceRare !== undefined ? forceRare : (Math.random() < getLuck());
+  const size = (isRare ? 55 : 35) * (isMobile ? 0.8 : 1); 
+  tacos.push({
+    x: forceX || Math.random() * (CONFIG.w - size),
+    y: forceY || -60,
+    size: size,
+    vy: Math.random() * 4 + 2,
+    rot: Math.random() * 6.28,
+    rotSpd: (Math.random()-0.5) * 0.3,
+    rare: isRare,
+    val: isRare ? 10 : 1
+  });
+}
+
+function spawnParticles(x, y, color, count) {
+  if (particles.length > MAX_PARTICLES) return;
+  for(let i=0; i<count; i++) particles.push(new Particle(x, y, color || COLORS[Math.floor(Math.random()*COLORS.length)]));
+}
+function spawnFloat(text, x, y, color) { 
+    if (floats.length > 10) floats.shift(); 
+    floats.push(new FloatingText(text, x, y, color)); 
+}
+
+function playClickSound() {
+    if (clickSoundEl.src) {
+      if (!clickSoundEl.paused) {
+          clickSoundEl.currentTime = 0; 
+      }
+      clickSoundEl.volume = globalVolume;
+      clickSoundEl.play().catch(e=>{});
+    }
+}
+
+// ===== GAME LOOP =====
+let lastTime = 0;
+function gameLoop(timestamp) {
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+  const now = Date.now();
+  
+  if (!state.gameInitialized) { 
+      ctx.fillStyle = '#000022'; ctx.fillRect(0, 0, CONFIG.w, CONFIG.h);
+      requestAnimationFrame(gameLoop);
+      return; 
+  }
+
+  // 1. BG Logic & Draw
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CONFIG.w, CONFIG.h);
+  
+  let baseBg = assets.bg1; 
+  
+  if (state.bossLevel >= 5 && bgTransitionY === 0) {
+      baseBg = assets.bg5; 
+  }
+  
+  if (baseBg.loaded) {
+      ctx.drawImage(baseBg.img, 0, 0, CONFIG.w, CONFIG.h);
+  }
+
+  if (state.bossLevel >= 5) {
+      if (state.needsBgReset && CONFIG.h > 0) { 
+          bgTransitionY = CONFIG.h; 
+          state.needsBgReset = false; 
+      }
+      
+      if (bgTransitionY > 0) {
+          bgTransitionY = Math.max(0, bgTransitionY - TRANSITION_SPEED); 
+          
+          if (assets.bg5.loaded) {
+              ctx.drawImage(assets.bg5.img, 0, bgTransitionY, CONFIG.w, CONFIG.h);
+          }
+      }
+  }
+
+  let sx = 0, sy = 0;
+  if(shakeAmount > 0) {
+    sx = (Math.random()-0.5)*shakeAmount; sy = (Math.random()-0.5)*shakeAmount;
+    shakeAmount *= 0.9; if(shakeAmount < 0.5) shakeAmount = 0;
+  }
+  ctx.save(); ctx.translate(sx, sy);
+
+  // 2. BOSS Logic & Draw
+  if(boss) {
+    boss.draw(ctx);
+    if(boss.update()) {
+      // БОСС УБИТ! ПОКАЗ РЕКЛАМЫ И ВЫДАЧА НАГРАДЫ
+      showCommercialBreak(() => {
+          // Эта часть кода выполняется ПОСЛЕ завершения рекламы
+          const reward = 500 * state.bossLevel;
+          state.money += reward; state.stats.totalMoney += reward; state.bossLevel++;
+          scheduleNextBoss(); spawnFloat(getText("reward"), CONFIG.w/2, 200, COLOR_GOLD); 
+          
+          if (state.bossLevel >= 5 && state.bossLevel - 1 < 5) {
+              state.needsBgReset = true; 
+              bgTransitionY = CONFIG.h; 
+          }
+          boss = null; lastSpawnTime = now; saveGame(); 
+          // Poki.gameplayStart() уже вызвана в showCommercialBreak callback
+      });
+      // Важно: сразу после начала death animation и запуска рекламы, босс должен стать null,
+      // чтобы не блокировать loop, пока идет реклама.
+      boss = null;
+    }
+  } else {
+    if (now >= state.nextBossSpawnTime && state.nextBossSpawnTime !== 0) {
+         boss = new BossEntity(state.bossLevel);
+         state.nextBossSpawnTime = 0; spawnFloat(getText("boss_warn"), CONFIG.w/2, 100, '#f00'); addShake(10);
+    }
+  }
+
+  // 3. TACOS
+  if (!isBossActive()) { 
+    for(let i=tacos.length-1; i>=0; i--) {
+      let t = tacos[i];
+      t.y += t.vy; t.x += Math.sin(t.y * 0.02); t.rot += t.rotSpd;
+      
+      ctx.save(); ctx.translate(t.x + t.size/2, t.y + t.size/2); ctx.rotate(t.rot);
+      
+      const tacoImg = t.rare && assets.goldTaco.loaded ? assets.goldTaco : assets.taco;
+      if(tacoImg.loaded) {
+          ctx.drawImage(tacoImg.img, -t.size/2, -t.size/2, t.size, t.size);
+      } else { 
+          ctx.fillStyle = t.rare ? COLOR_GOLD : '#ff9900'; 
+          ctx.fillRect(-t.size/2, -t.size/2, t.size, t.size); 
+      }
+      
+      if (t.rare && !assets.goldTaco.loaded) {
+          ctx.globalCompositeOperation='screen'; ctx.fillStyle=`hsl(${now/5%360},100%,50%)`; ctx.globalAlpha=0.4;
+          ctx.fillRect(-t.size/2,-t.size/2,t.size,t.size); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+      }
+      ctx.restore();
+
+      if(t.y > CONFIG.h + 50) tacos.splice(i, 1);
+    }
+
+    if(now - lastSpawnTime > getSpawnRate()) { spawnTaco(); lastSpawnTime = now; }
+  } else {
+      tacos = [];
+  }
+
+  particles.forEach(p => { p.update(); p.draw(ctx); });
+  particles = particles.filter(p => p.life > 0);
+  floats.forEach(f => { f.update(); f.draw(ctx); });
+  floats = floats.filter(f => f.life > 0);
+
+  ctx.restore(); 
+
+  // 4. PASSIVE & AUTO-CLICK
+  const passiveLvl = state.levels.factory;
+  if(passiveLvl > 0) {
+      const timeElapsed = now - state.lastPassiveTick;
+      if (timeElapsed >= 1000) { 
+          const inc = UPGRADES.factory.effect(passiveLvl) * Math.floor(timeElapsed / 1000);
+          state.money += inc; state.stats.totalMoney += inc; state.lastPassiveTick = now; 
+          if (Math.random() < 0.2) spawnFloat(`+${Math.floor(inc)} ${getText("factory")}`, CONFIG.w*0.8, CONFIG.h-50, '#0f8'); 
+      }
+  }
+  
+  const autoLvl = getAutoSpeed();
+  if(autoLvl > 0 && now - lastAutoClick > Math.max(100, 1000/autoLvl)) {
+      const dmg = getClickPower();
+      if(isBossActive()) { 
+          boss.hit(dmg/2); 
+          addShake(BOSS_SHAKE_AMT); 
+      } 
+      else {
+          state.money += dmg; 
+          if(Math.random()<0.3) spawnFloat(`+${Math.floor(dmg)}`, Math.random()*CONFIG.w, CONFIG.h-50, '#aaf');
+      }
+      updateHUD(); lastAutoClick = now;
+  }
+
+  // 5. COMBO Reset
+  if(state.combo > 0 && now > state.comboEnd) { state.combo = 0; updateHUD(); }
+  
+  const fps = 1000 / dt;
+  document.getElementById('fpsMeter').textContent = `FPS: ${Math.floor(fps)}`;
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ===== INPUT =====
+const inputEvent = isMobile ? 'touchstart' : 'pointerdown'; 
+
+canvas.addEventListener(inputEvent, (e) => {
+    e.preventDefault(); 
+    if (!musicStarted) startMusic(); // При первом взаимодействии
+    handleInteraction(e);
+});
+
+// Вызываем Poki.gameplayStart() при клике, чтобы убедиться, что мы в режиме игры
+canvas.addEventListener('pointerdown', startGameplay); 
+
+
+// ФИКС КНОПКИ: Напрямую вызываем спавн
+document.getElementById('spawnBurstBtn').addEventListener(inputEvent, (e) => {
+    e.preventDefault();
+    startGameplay(); // Убеждаемся, что геймплей запущен
+    if (isBossActive()) {
+        spawnFloat(getText("kill_boss"), CONFIG.w/2, CONFIG.h - 50, '#f00');
+    } else {
+        for(let i=0; i<Math.max(10, state.levels.speed * 2); i++) spawnTaco(); 
+        addShake(10);
+    }
+});
+
+
+// ===== SETTINGS & AUDIO =====
+function updateMusicButtonText() {
+    musicToggleBtn.textContent = audioEl.paused ? 'OFF' : 'ON';
+}
+
+function startMusic() {
+    if (audioEl.paused) {
+        audioEl.volume = globalVolume;
+        clickSoundEl.volume = globalVolume;
+        var promise = audioEl.play();
+        if (promise !== undefined) {
+            promise.then(_ => { 
+                musicStarted = true; 
+                updateMusicButtonText(); 
+                startGameplay(); // Вызываем Poki.gameplayStart() после успешного старта музыки
+            })
+            .catch(error => { console.log("Autoplay blocked:", error); });
+        }
+    }
+}
+function toggleMusic() {
+    if (audioEl.paused) { 
+        startMusic(); 
+    }
+    else { 
+        audioEl.pause(); 
+        updateMusicButtonText(); 
+    }
+}
+
+musicToggleBtn.addEventListener('click', toggleMusic);
+
+document.getElementById('volumeSlider').addEventListener('input', (e) => {
+    globalVolume = e.target.value / 100;
+    audioEl.volume = globalVolume;
+    clickSoundEl.volume = globalVolume;
+});
+
+// LANGUAGE LOGIC
+document.getElementById('langSelect').addEventListener('change', (e) => {
+    setLanguage(e.target.value);
+});
+
+function getText(key) {
+    if (LANG[currentLang][key]) return LANG[currentLang][key];
+    return key; 
+}
+
+function setLanguage(langCode) {
+    currentLang = langCode;
+    const dict = LANG[langCode];
+    
+    document.querySelectorAll('[data-lang]').forEach(el => {
+        const k = el.getAttribute('data-lang');
+        if(dict[k]) el.textContent = dict[k];
+    });
+
+    initShop();
+    updateHUD();
+}
+
+function handleInteraction(e) {
+    
+    // Поддержка мультитача
+    const touches = e.touches || [{clientX: e.clientX, clientY: e.clientY}];
+    const rect = canvas.getBoundingClientRect();
+
+    for (let i = 0; i < touches.length; i++) {
+        const x = touches[i].clientX - rect.left;
+        const y = touches[i].clientY - rect.top;
+        
+        let hit = false;
+        const rawDmg = getClickPower();
+        let dmg = rawDmg;
+        let isCrit = false;
+
+        if (Math.random() < UPGRADES.crit.effect(state.levels.crit)) { dmg *= 5; isCrit = true; }
+
+        if(isBossActive()) {
+          if(x > boss.x - 30 && x < boss.x + boss.size + 30 && y > boss.y - 30 && y < boss.y + boss.size + 30) {
+            playClickSound(); 
+            if (boss.hit(dmg)) spawnFloat(getText("reward"), x, y, COLOR_GOLD); 
+            else {
+               if (isCrit) { spawnFloat(`CRIT!`, x, y, COLOR_GOLD); addShake(8); } 
+               else { spawnFloat(`-${Math.floor(dmg)}`, x, y, '#fff'); addShake(2); }
+            }
+            hit = true;
+          }
+        }
+
+        if(!isBossActive() && !hit) { 
+          for(let k=tacos.length-1; k>=0; k--) {
+            let t = tacos[k];
+            const pad = HITBOX_PADDING;
+            if(x > t.x - pad && x < t.x + t.size + pad && y > t.y - pad && y < t.y + t.size + pad) {
+              
+              playClickSound(); 
+              
+              let reward = Math.floor(dmg * t.val * (1 + state.combo * 0.1));
+              state.money += reward; state.combo++; state.comboEnd = Date.now() + 2500;
+              tacos.splice(k, 1);
+              spawnParticles(x, y, t.rare ? COLOR_GOLD : '#ffa500', isMobile ? 4 : 8);
+              
+              if (isCrit) spawnFloat(`CRIT!`, x, y, COLOR_GOLD);
+              else spawnFloat(`+${reward}`, x, y, t.rare ? COLOR_GOLD : '#fff'); 
+              hit = true; break;
+            }
+          }
+        }
+        
+        if (!hit && !isBossActive()) {
+            const miss = Math.floor(rawDmg * 0.1);
+            state.money += miss; spawnFloat(`+${miss}`, x, y, '#333'); state.combo = 0;
+        }
+    }
+    updateHUD(); updateShopUI(); 
+}
+
+// ===== SHOP & SAVE =====
+function initShop() {
+    const container = document.getElementById('shopContainer');
+    container.innerHTML = '';
+    const dict = LANG[currentLang].upgrades;
+    
+    Object.keys(UPGRADES).forEach(key => {
+        const u = UPGRADES[key];
+        const btn = document.createElement('button');
+        btn.className = 'btn'; btn.id = `btn_${key}`; 
+        btn.addEventListener('pointerup', () => buyUpgrade(key));
+        
+        const name = dict[key] || u.id; 
+        btn.innerHTML = `<div><div style="font-size:10px; margin-bottom:2px;">${name}</div></div><div style="text-align:right;"><div class="cost" id="cost_${key}">0 $</div><div class="lvl" id="lvl_${key}">0</div></div>`;
+        container.appendChild(btn);
+    });
+    updateShopUI();
+}
+
+function buyUpgrade(type) {
+    const cost = getCost(type);
+    if(state.money >= cost) {
+        state.money -= cost; state.levels[type]++;
+        spawnFloat(getText("bought"), CONFIG.w/2, CONFIG.h/2, '#0f0'); 
+        updateHUD(); updateShopUI(); saveGame();
+    }
+}
+
+function updateShopUI() {
+    // Poki: Когда магазин открыт, геймплей остановлен, т.е. Poki.gameplayStop() вызывается
+    // Когда магазин закрыт (например, пользователь нажимает Esc или кликает вне), Poki.gameplayStart() вызывается.
+    // Пока что оставим вызовы на элементах HTML (см. sidebar)
+    Object.keys(UPGRADES).forEach(key => {
+        if (state.levels[key] === undefined) state.levels[key] = 0;
+        const cost = getCost(key);
+        const btn = document.getElementById(`btn_${key}`);
+        if (!btn) return; 
+        
+        document.getElementById(`cost_${key}`).innerText = cost.toLocaleString() + " $";
+        document.getElementById(`lvl_${key}`).innerText = state.levels[key];
+        if(state.money >= cost) { btn.disabled = false; btn.style.opacity = 1; } 
+        else { btn.disabled = true; btn.style.opacity = 0.5; }
+    });
+}
+
+function updateHUD() {
+    document.getElementById('money').innerText = Math.floor(state.money).toLocaleString();
+    document.getElementById('combo').innerText = "x" + state.combo;
+    document.getElementById('bossLevelDisplay').innerText = state.bossLevel;
+    document.getElementById('perClickDisplay').innerText = Math.floor(getClickPower());
+    document.getElementById('comboStat').style.color = state.combo > 1 ? 'var(--gold)' : '#fff';
+}
+
+function saveGame() { 
+    try { 
+        localStorage.setItem(CONFIG.saveKey, JSON.stringify(state)); 
+    } catch(e){} 
+}
+
+function loadGame() {
+    try {
+        const saved = localStorage.getItem(CONFIG.saveKey);
+        if(saved) {
+            const parsed = JSON.parse(saved);
+            state = { ...DEFAULT_STATE, ...parsed };
+            state.levels = { ...DEFAULT_STATE.levels, ...parsed.levels };
+            
+            if(state.nextBossSpawnTime < Date.now() || state.nextBossSpawnTime === 0) {
+                 scheduleNextBoss(); 
+            }
+            if(state.bossLevel >= 5) bgTransitionY = 0; 
+        } else {
+             scheduleNextBoss();
+        }
+    } catch(e) {
+        console.error("Ошибка загрузки сохранения:", e);
+        state = {...DEFAULT_STATE};
+        scheduleNextBoss();
+    }
+}
+
+document.getElementById('resetBtn').onclick = () => {
+    // Poki: Вызываем Poki.gameplayStop() при открытии модального окна сброса
+    stopGameplay();
+    const confirmText = getText('reset').toUpperCase();
+    if (window.prompt(`ДЛЯ ПОДТВЕРЖДЕНИЯ ВВЕДИТЕ: ${confirmText}`)?.toUpperCase() === confirmText) {
+        localStorage.removeItem(CONFIG.saveKey); 
+        tacos = []; boss = null; particles = []; floats = []; bgTransitionY = 0;
+        state = {...DEFAULT_STATE}; 
+        scheduleNextBoss();
+        updateHUD(); updateShopUI();
+        state.gameInitialized = true; 
+        console.log("Прогресс сброшен.");
+        location.reload(); 
+    } else {
+        console.log("Сброс отменен. Возобновление игры.");
+        startGameplay(); // Возобновляем геймплей, если сброс отменен
+    }
+};
+
+// ===== BOOT SEQUENCE =====
+function initGame() {
+    loadGame(); 
+    initShop(); 
+    updateHUD(); 
+    resize();
+    updateMusicButtonText(); 
+    state.gameInitialized = true; 
+    setLanguage(currentLang);
+    
+    // Poki: Вызов gameplayStart в начале, после инициализации
+    startGameplay();
+    
+    requestAnimationFrame(gameLoop);
+}
+
+window.onload = initGame;
+setInterval(saveGame, 5000);
+setInterval(() => { if (!isBossActive() && state.gameInitialized) spawnTaco(); }, 1000);
+
+})();
+</script>
+</body>
+</html>
